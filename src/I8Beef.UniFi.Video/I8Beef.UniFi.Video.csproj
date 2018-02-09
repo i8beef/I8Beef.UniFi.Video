@@ -9,6 +9,9 @@
     <PackageLicenseUrl>https://github.com/i8beef/I8Beef.UniFi.Video/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/i8beef/I8Beef.UniFi.Video</PackageProjectUrl>
     <PackageTags>Ubiquiti UniFi NVR</PackageTags>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.0.0.0</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
