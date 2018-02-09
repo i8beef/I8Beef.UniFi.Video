@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>Michael Hallock</Authors>
+    <Company>Michael Hallock</Company>
+    <Description>Provides access to UniFi Video NVR</Description>
+    <Copyright>Copyright ©  2018</Copyright>
+    <PackageLicenseUrl>https://github.com/i8beef/I8Beef.UniFi.Video/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/i8beef/I8Beef.UniFi.Video</PackageProjectUrl>
+    <PackageTags>Ubiquiti UniFi NVR</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>bin\Debug\netstandard2.0\I8Beef.UniFi.Video.xml</DocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>bin\Release\netstandard2.0\I8Beef.UniFi.Video.xml</DocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="I8Beef.CodeAnalysis.RuleSet" Version="1.0.11" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+  </ItemGroup>
+
+</Project>

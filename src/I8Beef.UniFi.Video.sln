@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2010
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "I8Beef.UniFi.Video", "I8Beef.UniFi.Video\I8Beef.UniFi.Video.csproj", "{3CD755E3-D28A-47EC-B515-4033B70F5C11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "I8Beef.UniFi.Video.TestClient", "I8Beef.UniFi.Video.TestClient\I8Beef.UniFi.Video.TestClient.csproj", "{0F6174EF-655D-4C6F-BC01-CAF17076BC7B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3CD755E3-D28A-47EC-B515-4033B70F5C11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CD755E3-D28A-47EC-B515-4033B70F5C11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CD755E3-D28A-47EC-B515-4033B70F5C11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3CD755E3-D28A-47EC-B515-4033B70F5C11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F6174EF-655D-4C6F-BC01-CAF17076BC7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F6174EF-655D-4C6F-BC01-CAF17076BC7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F6174EF-655D-4C6F-BC01-CAF17076BC7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F6174EF-655D-4C6F-BC01-CAF17076BC7B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2A3F0B33-7DC9-489E-85F6-58E6E40BC0AE}
+	EndGlobalSection
+EndGlobal
