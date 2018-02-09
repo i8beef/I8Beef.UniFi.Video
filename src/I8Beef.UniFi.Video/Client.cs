@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -23,6 +24,8 @@ namespace I8Beef.UniFi.Video
         private readonly CookieContainer _cookieContainer;
 
         private bool _disposed = false;
+
+        private string _apiKey = string.Empty;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Client"/> class.
@@ -67,6 +70,9 @@ namespace I8Beef.UniFi.Video
                 _cookieContainer.SetCookies(new Uri(_host), cookieHeader);
             }
 
+            dynamic responseContent = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            _apiKey = responseContent.data[0].apiKey;
+
             IsAuthenticated = true;
         }
 
@@ -77,13 +83,64 @@ namespace I8Beef.UniFi.Video
         /// <returns>A dynamic object containing the JSON response.</returns>
         public async Task<dynamic> BootstrapAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            var response = await _httpClient.GetAsync(_host + "/api/2.0/bootstrap", cancellationToken).ConfigureAwait(false);
+            var response = await GetAsync($"/api/2.0/bootstrap", cancellationToken).ConfigureAwait(false);
+
+            return JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+        }
+
+        /// <summary>
+        /// Gets NVR camera information for all cameras.
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A dictionary of dynamic objects containing the JSON response.</returns>
+        public async Task<IDictionary<string, dynamic>> CamerasAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var bootstrap = await BootstrapAsync(cancellationToken).ConfigureAwait(false);
+            var result = new Dictionary<string, dynamic>();
+            foreach (var camera in bootstrap.data[0].cameras)
+            {
+                string cameraId = camera.platform != null ? camera._id : camera.uuid;
+                result[cameraId] = camera;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets NVR camera information for a single camera.
+        /// </summary>
+        /// <param name="cameraId">Camera ID to query.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A dynamic object containing the JSON response.</returns>
+        public async Task<dynamic> CameraAsync(string cameraId, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var response = await GetAsync($"/api/2.0/camera/{cameraId}?apiKey={_apiKey}", cancellationToken).ConfigureAwait(false);
+
+            return JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+        }
+
+        /// <summary>
+        /// Gets the URL specified and returns the result.
+        /// </summary>
+        /// <param name="relativeUrl">Relative URL to query.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A dynamic object containing the JSON response.</returns>
+        private async Task<HttpResponseMessage> GetAsync(string relativeUrl, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!IsAuthenticated)
+                await AuthorizeAsync();
+
+            var response = await _httpClient.GetAsync(_host + relativeUrl, cancellationToken).ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
                 IsAuthenticated = false;
+                _apiKey = string.Empty;
+            }
 
             response.EnsureSuccessStatusCode();
-            return JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+
+            return response;
         }
 
         #region IDisposable Support
