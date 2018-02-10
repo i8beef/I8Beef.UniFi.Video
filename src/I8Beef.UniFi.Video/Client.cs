@@ -25,8 +25,6 @@ namespace I8Beef.UniFi.Video
 
         private bool _disposed = false;
 
-        private string _apiKey = string.Empty;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="Client"/> class.
         /// </summary>
@@ -69,9 +67,6 @@ namespace I8Beef.UniFi.Video
             {
                 _cookieContainer.SetCookies(new Uri(_host), cookieHeader);
             }
-
-            dynamic responseContent = JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
-            _apiKey = responseContent.data[0].apiKey;
 
             IsAuthenticated = true;
         }
@@ -116,7 +111,7 @@ namespace I8Beef.UniFi.Video
         /// <returns>A dynamic object containing the JSON response.</returns>
         public async Task<dynamic> CameraAsync(string cameraId, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var response = await GetAsync($"/api/2.0/camera/{cameraId}?apiKey={_apiKey}", cancellationToken).ConfigureAwait(false);
+            var response = await GetAsync($"/api/2.0/camera/{cameraId}", cancellationToken).ConfigureAwait(false);
 
             return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
         }
@@ -131,19 +126,37 @@ namespace I8Beef.UniFi.Video
         /// <returns>A dynamic object containing the JSON response.</returns>
         public async Task<dynamic> MotionAlertsAsync(string cameraId, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default(CancellationToken))
         {
-            // Truncate
-            startTime = new DateTime(startTime.Year, startTime.Month, startTime.Day, startTime.Hour, startTime.Minute, startTime.Second, startTime.Kind);
-            endTime = new DateTime(endTime.Year, endTime.Month, endTime.Day, endTime.Hour, endTime.Minute, endTime.Second, endTime.Kind);
+            startTime = startTime.RemoveMilliseconds();
+            endTime = endTime.RemoveMilliseconds();
 
             // Minimum resolution for UniFi is 2 seconds
             var timeSpanSeconds = endTime.Subtract(startTime).Seconds;
             if (timeSpanSeconds < 2)
                 timeSpanSeconds = 2;
 
-            var jsStartTime = (long)startTime.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
-            var jsEndTime = (long)endTime.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
+            var jsStartTime = startTime.ToUnixTimestamp();
+            var jsEndTime = startTime.ToUnixTimestamp();
 
             var response = await GetAsync($"/api/2.0/motion?startTime={jsStartTime}&endTime={jsEndTime}&interval={timeSpanSeconds * 1000}&cameras%5B%5D={cameraId}&sortby=startTime&sort=asc", cancellationToken).ConfigureAwait(false);
+
+            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+        }
+
+        /// <summary>
+        /// Gets NVR recordings ngle camera.
+        /// </summary>
+        /// <param name="cameraId">Camera ID to query.</param>
+        /// <param name="cause">Cause ID to query.</param>
+        /// <param name="startTime">Start Time.</param>
+        /// <param name="endTime">End Time.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A dynamic object containing the JSON response.</returns>
+        public async Task<dynamic> RecordingAsync(string cameraId, string cause, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var jsStartTime = startTime.RemoveMilliseconds().ToUnixTimestamp();
+            var jsEndTime = endTime.RemoveMilliseconds().ToUnixTimestamp();
+
+            var response = await GetAsync($"/api/2.0/recording?cause={cause}&startTime={jsStartTime}&endTime={jsEndTime}&cameras={cameraId}&idsOnly=false&sortBy=startTime&sort=desc", cancellationToken).ConfigureAwait(false);
 
             return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
         }
@@ -176,10 +189,7 @@ namespace I8Beef.UniFi.Video
             var response = await _httpClient.GetAsync(_host + relativeUrl, cancellationToken).ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
-            {
                 IsAuthenticated = false;
-                _apiKey = string.Empty;
-            }
 
             response.EnsureSuccessStatusCode();
 

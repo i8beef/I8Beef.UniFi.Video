@@ -36,13 +36,25 @@ namespace I8Beef.UniFi.Video.TestClient
                 var bootstrap = await client.BootstrapAsync();
                 var cameras = await client.CamerasAsync();
 
-                var waitSeconds = 5;
+                var waitSeconds = 1;
                 var lastRun = DateTime.Now;
                 while (true)
                 {
                     var now = DateTime.Now;
                     foreach (var cameraId in cameras.Keys)
                     {
+                        #region Recording based detection
+
+                        // Get all recordings since the last run
+                        dynamic recordings = await client.RecordingAsync(cameraId, "motionRecording", now.AddSeconds(-60), now);
+
+                        // Determine if there are any motion alerts in the time span with a score over motionTheshold
+                        if (((IEnumerable<dynamic>)recordings.data).Any(x => x.inProgress == true))
+                            Debug.WriteLine($"RECORDING: Motion detected on camera {cameraId}");
+
+                        #endregion
+                        #region Motion event based detection
+
                         // Determine motion threshold from current camera settings
                         int motionThreshold = 50;
                         if (cameras[cameraId].zones.Count > 0)
@@ -54,7 +66,9 @@ namespace I8Beef.UniFi.Video.TestClient
                         // Determine if there are any motion alerts in the time span with a score over motionTheshold
                         if (motionAlerts.data.Count > 0)
                             if (((IEnumerable<dynamic>)motionAlerts.data[0].data).Any(x => x.score > motionThreshold))
-                                Debug.WriteLine($"Motion detected on camera {cameraId}");
+                                Debug.WriteLine($"EVENT: Motion detected on camera {cameraId}");
+
+                        #endregion
                     }
 
                     lastRun = now;
