@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace I8Beef.UniFi.Video
 {
@@ -70,7 +70,7 @@ namespace I8Beef.UniFi.Video
                 _cookieContainer.SetCookies(new Uri(_host), cookieHeader);
             }
 
-            dynamic responseContent = JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            dynamic responseContent = JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
             _apiKey = responseContent.data[0].apiKey;
 
             IsAuthenticated = true;
@@ -85,7 +85,7 @@ namespace I8Beef.UniFi.Video
         {
             var response = await GetAsync($"/api/2.0/bootstrap", cancellationToken).ConfigureAwait(false);
 
-            return JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
         }
 
         /// <summary>
@@ -95,9 +95,11 @@ namespace I8Beef.UniFi.Video
         /// <returns>A dictionary of dynamic objects containing the JSON response.</returns>
         public async Task<IDictionary<string, dynamic>> CamerasAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            var bootstrap = await BootstrapAsync(cancellationToken).ConfigureAwait(false);
+            var response = await GetAsync($"/api/2.0/camera", cancellationToken).ConfigureAwait(false);
+            dynamic responseContent = JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+
             var result = new Dictionary<string, dynamic>();
-            foreach (var camera in bootstrap.data[0].cameras)
+            foreach (var camera in responseContent.data)
             {
                 string cameraId = camera.platform != null ? camera._id : camera.uuid;
                 result[cameraId] = camera;
@@ -116,7 +118,48 @@ namespace I8Beef.UniFi.Video
         {
             var response = await GetAsync($"/api/2.0/camera/{cameraId}?apiKey={_apiKey}", cancellationToken).ConfigureAwait(false);
 
-            return JsonConvert.DeserializeObject(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+        }
+
+        /// <summary>
+        /// Gets NVR motion alerts for a single camera.
+        /// </summary>
+        /// <param name="cameraId">Camera ID to query.</param>
+        /// <param name="startTime">Start Time.</param>
+        /// <param name="endTime">End Time.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A dynamic object containing the JSON response.</returns>
+        public async Task<dynamic> MotionAlertsAsync(string cameraId, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            // Truncate
+            startTime = new DateTime(startTime.Year, startTime.Month, startTime.Day, startTime.Hour, startTime.Minute, startTime.Second, startTime.Kind);
+            endTime = new DateTime(endTime.Year, endTime.Month, endTime.Day, endTime.Hour, endTime.Minute, endTime.Second, endTime.Kind);
+
+            // Minimum resolution for UniFi is 2 seconds
+            var timeSpanSeconds = endTime.Subtract(startTime).Seconds;
+            if (timeSpanSeconds < 2)
+                timeSpanSeconds = 2;
+
+            var jsStartTime = (long)startTime.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
+            var jsEndTime = (long)endTime.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
+
+            var response = await GetAsync($"/api/2.0/motion?startTime={jsStartTime}&endTime={jsEndTime}&interval={timeSpanSeconds * 1000}&cameras%5B%5D={cameraId}&sortby=startTime&sort=asc", cancellationToken).ConfigureAwait(false);
+
+            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+        }
+
+        /// <summary>
+        /// Gets NVR stream information for a single camera.
+        /// </summary>
+        /// <param name="cameraId">Camera ID to query.</param>
+        /// <param name="channel">Stream channel to query.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A dynamic object containing the JSON response.</returns>
+        public async Task<dynamic> StreamUrlAsync(string cameraId, int channel, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var response = await GetAsync($"/api/2.0/stream/{cameraId}/{channel}/url", cancellationToken).ConfigureAwait(false);
+
+            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
         }
 
         /// <summary>
@@ -154,9 +197,10 @@ namespace I8Beef.UniFi.Video
             if (_disposed)
                 return;
 
+            // Dispose managed state (managed objects).
             if (disposing)
             {
-                // Dispose managed state (managed objects).
+                // Dispose the http client
                 if (_httpClient != null)
                     _httpClient.Dispose();
 
