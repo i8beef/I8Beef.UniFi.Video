@@ -119,12 +119,12 @@ namespace I8Beef.UniFi.Video
         /// <summary>
         /// Gets NVR motion alerts for a single camera.
         /// </summary>
-        /// <param name="cameraId">Camera ID to query.</param>
+        /// <param name="cameraIds">Camera IDs to query.</param>
         /// <param name="startTime">Start Time.</param>
         /// <param name="endTime">End Time.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dynamic object containing the JSON response.</returns>
-        public async Task<dynamic> MotionAlertsAsync(string cameraId, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<dynamic> MotionAlertsAsync(IList<string> cameraIds, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default(CancellationToken))
         {
             startTime = startTime.RemoveMilliseconds();
             endTime = endTime.RemoveMilliseconds();
@@ -137,7 +137,11 @@ namespace I8Beef.UniFi.Video
             var jsStartTime = startTime.ToUnixTimestamp();
             var jsEndTime = startTime.ToUnixTimestamp();
 
-            var response = await GetAsync($"/api/2.0/motion?startTime={jsStartTime}&endTime={jsEndTime}&interval={timeSpanSeconds * 1000}&cameras%5B%5D={cameraId}&sortby=startTime&sort=asc", cancellationToken).ConfigureAwait(false);
+            var url = $"/api/2.0/motion?startTime={jsStartTime}&endTime={jsEndTime}&interval={timeSpanSeconds * 1000}&" +
+                string.Join("&", cameraIds.Select(x => $"cameras%5B%5D={x}")) +
+                "&sortby=startTime&sort=asc";
+
+            var response = await GetAsync(url, cancellationToken).ConfigureAwait(false);
 
             return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
         }
@@ -145,18 +149,23 @@ namespace I8Beef.UniFi.Video
         /// <summary>
         /// Gets NVR recordings ngle camera.
         /// </summary>
-        /// <param name="cameraId">Camera ID to query.</param>
-        /// <param name="cause">Cause ID to query.</param>
+        /// <param name="cameraIds">Camera IDs to query.</param>
+        /// <param name="causes">Causes to query.</param>
         /// <param name="startTime">Start Time.</param>
         /// <param name="endTime">End Time.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dynamic object containing the JSON response.</returns>
-        public async Task<dynamic> RecordingAsync(string cameraId, string cause, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<dynamic> RecordingAsync(IList<string> cameraIds, IList<string> causes, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default(CancellationToken))
         {
             var jsStartTime = startTime.RemoveMilliseconds().ToUnixTimestamp();
             var jsEndTime = endTime.RemoveMilliseconds().ToUnixTimestamp();
 
-            var response = await GetAsync($"/api/2.0/recording?cause={cause}&startTime={jsStartTime}&endTime={jsEndTime}&cameras={cameraId}&idsOnly=false&sortBy=startTime&sort=desc", cancellationToken).ConfigureAwait(false);
+            var url = "/api/2.0/recording?" +
+                string.Join("&", causes.Select(x => $"cause%5B%5D={x}")) +
+                $"&startTime={jsStartTime}&endTime={jsEndTime}&" +
+                string.Join("&", cameraIds.Select(x => $"cameras%5B%5D={x}")) +
+                "&idsOnly=false&sortBy=startTime&sort=desc";
+            var response = await GetAsync(url, cancellationToken).ConfigureAwait(false);
 
             return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
         }

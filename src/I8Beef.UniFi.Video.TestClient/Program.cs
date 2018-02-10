@@ -41,18 +41,23 @@ namespace I8Beef.UniFi.Video.TestClient
                 while (true)
                 {
                     var now = DateTime.Now;
+
+                    #region Recording based detection
+
+                    // Get all recordings since the last run
+                    dynamic recordings = await client.RecordingAsync(cameras.Keys.ToList(), new List<string> { "motionRecording" }, now.AddSeconds(-60), now);
+
+                    // Determine if there are any motion alerts in the time span with a score over motionTheshold
+                    var inProgressRecordings = ((IEnumerable<dynamic>)recordings.data).Where(x => x.inProgress == true);
+                    foreach (var recording in inProgressRecordings)
+                    {
+                        Debug.WriteLine($"RECORDING: Motion detected on camera {recording.cameras[0]}");
+                    }
+
+                    #endregion
+
                     foreach (var cameraId in cameras.Keys)
                     {
-                        #region Recording based detection
-
-                        // Get all recordings since the last run
-                        dynamic recordings = await client.RecordingAsync(cameraId, "motionRecording", now.AddSeconds(-60), now);
-
-                        // Determine if there are any motion alerts in the time span with a score over motionTheshold
-                        if (((IEnumerable<dynamic>)recordings.data).Any(x => x.inProgress == true))
-                            Debug.WriteLine($"RECORDING: Motion detected on camera {cameraId}");
-
-                        #endregion
                         #region Motion event based detection
 
                         // Determine motion threshold from current camera settings
@@ -61,7 +66,7 @@ namespace I8Beef.UniFi.Video.TestClient
                             motionThreshold = cameras[cameraId].zones[0].sensitivity;
 
                         // Get motion alerts in the last waitForSeconds time span
-                        dynamic motionAlerts = await client.MotionAlertsAsync(cameraId, lastRun, now);
+                        dynamic motionAlerts = await client.MotionAlertsAsync(new List<string> { cameraId }, lastRun, now);
 
                         // Determine if there are any motion alerts in the time span with a score over motionTheshold
                         if (motionAlerts.data.Count > 0)
