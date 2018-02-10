@@ -1,4 +1,5 @@
-﻿using System;
+﻿using I8Beef.UniFi.Video.Protocol.Recording;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -34,10 +35,10 @@ namespace I8Beef.UniFi.Video.TestClient
             {
                 await client.AuthorizeAsync();
                 var bootstrap = await client.BootstrapAsync();
-                var cameras = await client.CamerasAsync();
+                var cameras = await client.CameraAsync();
+                var cameraIds = cameras.Select(x => x.Id);
 
                 var waitSeconds = 1;
-                var lastRun = DateTime.Now;
                 while (true)
                 {
                     var now = DateTime.Now;
@@ -45,38 +46,42 @@ namespace I8Beef.UniFi.Video.TestClient
                     #region Recording based detection
 
                     // Get all recordings since the last run
-                    dynamic recordings = await client.RecordingAsync(cameras.Keys.ToList(), new List<string> { "motionRecording" }, now.AddSeconds(-60), now);
+                    var recordings = await client.RecordingAsync(now.AddSeconds(-60), now, cameraIds, new List<RecordingEventType> { RecordingEventType.MotionRecording });
 
                     // Determine if there are any motion alerts in the time span with a score over motionTheshold
-                    var inProgressRecordings = ((IEnumerable<dynamic>)recordings.data).Where(x => x.inProgress == true);
+                    var inProgressRecordings = recordings.Where(x => x.InProgress);
                     foreach (var recording in inProgressRecordings)
                     {
-                        Debug.WriteLine($"RECORDING: Motion detected on camera {recording.cameras[0]}");
+                        Debug.WriteLine($"RECORDING: Motion detected on camera {recording.Cameras[0]}");
                     }
 
                     #endregion
 
-                    foreach (var cameraId in cameras.Keys)
-                    {
-                        #region Motion event based detection
+                    #region Motion event based detection
 
+                    // Get motion alerts since last run
+                    var motionAlerts = await client.MotionAlertsAsync(now.AddSeconds(-60), now, 2, cameraIds);
+
+                    foreach (var camera in cameras)
+                    {
                         // Determine motion threshold from current camera settings
                         int motionThreshold = 50;
-                        if (cameras[cameraId].zones.Count > 0)
-                            motionThreshold = cameras[cameraId].zones[0].sensitivity;
+                        if (camera.Zones.Count() > 0)
+                            motionThreshold = camera.Zones[0].Sensitivity;
 
-                        // Get motion alerts in the last waitForSeconds time span
-                        dynamic motionAlerts = await client.MotionAlertsAsync(new List<string> { cameraId }, lastRun, now);
+                        int motionSecondsCutoff = camera.AnalyticsSettings.EndMotionAfterSecs;
 
-                        // Determine if there are any motion alerts in the time span with a score over motionTheshold
-                        if (motionAlerts.data.Count > 0)
-                            if (((IEnumerable<dynamic>)motionAlerts.data[0].data).Any(x => x.score > motionThreshold))
-                                Debug.WriteLine($"EVENT: Motion detected on camera {cameraId}");
-
-                        #endregion
+                        // Determine if there are any motion alerts with a score over motionTheshold
+                        var motionAlertsForCamera = motionAlerts.FirstOrDefault(x => x.CameraId == camera.Id);
+                        if (motionAlertsForCamera != null && motionAlertsForCamera.Data.Any(x =>
+                             x.Score >= motionThreshold &&
+                             now.RemoveMilliseconds().ToUniversalTime().Subtract(x.Timestamp).Seconds < motionSecondsCutoff))
+                        {
+                            Debug.WriteLine($"EVENT: Motion detected on camera {camera.Id}");
+                        }
                     }
 
-                    lastRun = now;
+                    #endregion
 
                     // Wait on second
                     await Task.Delay(waitSeconds * 1000);

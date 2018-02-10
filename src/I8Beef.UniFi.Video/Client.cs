@@ -6,7 +6,14 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using I8Beef.UniFi.Video.Protocol;
+using I8Beef.UniFi.Video.Protocol.Camera;
+using I8Beef.UniFi.Video.Protocol.Motion;
+using I8Beef.UniFi.Video.Protocol.Recording;
+using I8Beef.UniFi.Video.Protocol.Stream;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 
 namespace I8Beef.UniFi.Video
 {
@@ -15,6 +22,7 @@ namespace I8Beef.UniFi.Video
     /// </summary>
     public class Client : IDisposable
     {
+        private readonly JsonSerializerSettings _jsonSettings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
         private readonly string _host;
         private readonly string _username;
         private readonly string _password;
@@ -59,7 +67,8 @@ namespace I8Beef.UniFi.Video
         public async Task AuthorizeAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             var body = new StringContent("{\"email\":\"" + _username + "\", \"password\":\"" + _password + "\"}", Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync(_host + "/api/2.0/login", body, cancellationToken).ConfigureAwait(false);
+            var response = await _httpClient.PostAsync(_host + "/api/2.0/login", body, cancellationToken)
+                .ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
             var cookieHeader = response.Headers.GetValues("set-cookie").FirstOrDefault();
@@ -78,29 +87,10 @@ namespace I8Beef.UniFi.Video
         /// <returns>A dynamic object containing the JSON response.</returns>
         public async Task<dynamic> BootstrapAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            var response = await GetAsync($"/api/2.0/bootstrap", cancellationToken).ConfigureAwait(false);
+            var response = await GetAsync($"/api/2.0/bootstrap", null, cancellationToken).ConfigureAwait(false);
 
-            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
-        }
-
-        /// <summary>
-        /// Gets NVR camera information for all cameras.
-        /// </summary>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>A dictionary of dynamic objects containing the JSON response.</returns>
-        public async Task<IDictionary<string, dynamic>> CamerasAsync(CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var response = await GetAsync($"/api/2.0/camera", cancellationToken).ConfigureAwait(false);
-            dynamic responseContent = JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
-
-            var result = new Dictionary<string, dynamic>();
-            foreach (var camera in responseContent.data)
-            {
-                string cameraId = camera.platform != null ? camera._id : camera.uuid;
-                result[cameraId] = camera;
-            }
-
-            return result;
+            return JObject.Parse(await response.Content.ReadAsStringAsync()
+                .ConfigureAwait(false));
         }
 
         /// <summary>
@@ -109,65 +99,149 @@ namespace I8Beef.UniFi.Video
         /// <param name="cameraId">Camera ID to query.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dynamic object containing the JSON response.</returns>
-        public async Task<dynamic> CameraAsync(string cameraId, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<Camera>> CameraAsync(string cameraId = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var response = await GetAsync($"/api/2.0/camera/{cameraId}", cancellationToken).ConfigureAwait(false);
+            var response = await GetAsync("/api/2.0/camera" + (!string.IsNullOrEmpty(cameraId) ? $"/{cameraId}" : string.Empty), null, cancellationToken)
+                .ConfigureAwait(false);
 
-            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            return JsonConvert.DeserializeObject<Response<Camera>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false), _jsonSettings)
+                .Data;
         }
 
         /// <summary>
         /// Gets NVR motion alerts for a single camera.
         /// </summary>
-        /// <param name="cameraIds">Camera IDs to query.</param>
         /// <param name="startTime">Start Time.</param>
         /// <param name="endTime">End Time.</param>
+        /// <param name="intervalSeconds">Interval seconds (defaults: 2, minimum: 2, maximum: 30).</param>
+        /// <param name="cameraIds">Camera IDs to query.</param>
+        /// <param name="sortBy">Sort by (default: startTime).</param>
+        /// <param name="sort">Sort asc or desc (default: asc).</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dynamic object containing the JSON response.</returns>
-        public async Task<dynamic> MotionAlertsAsync(IList<string> cameraIds, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<CameraMotion>> MotionAlertsAsync(
+            DateTime startTime,
+            DateTime endTime,
+            int intervalSeconds = 2,
+            IEnumerable<string> cameraIds = null,
+            string sortBy = "startTime",
+            string sort = "asc",
+            CancellationToken cancellationToken = default(CancellationToken))
         {
-            startTime = startTime.RemoveMilliseconds();
-            endTime = endTime.RemoveMilliseconds();
-
             // Minimum resolution for UniFi is 2 seconds
-            var timeSpanSeconds = endTime.Subtract(startTime).Seconds;
-            if (timeSpanSeconds < 2)
-                timeSpanSeconds = 2;
+            if (intervalSeconds < 2)
+                intervalSeconds = 2;
+            if (intervalSeconds > 30)
+                intervalSeconds = 30;
 
-            var jsStartTime = startTime.ToUnixTimestamp();
-            var jsEndTime = startTime.ToUnixTimestamp();
+            var jsStartTime = startTime.RemoveMilliseconds().ToUnixTimestamp();
+            var jsEndTime = endTime.RemoveMilliseconds().ToUnixTimestamp();
 
-            var url = $"/api/2.0/motion?startTime={jsStartTime}&endTime={jsEndTime}&interval={timeSpanSeconds * 1000}&" +
-                string.Join("&", cameraIds.Select(x => $"cameras%5B%5D={x}")) +
-                "&sortby=startTime&sort=asc";
+            var queryParams = new List<string>
+            {
+                $"startTime={jsStartTime}",
+                $"endTime={jsEndTime}",
+                $"interval={intervalSeconds * 1000}",
+                $"sortBy={sortBy}",
+                $"sort={sort}"
+            };
 
-            var response = await GetAsync(url, cancellationToken).ConfigureAwait(false);
+            if (cameraIds != null)
+                queryParams.AddRange(cameraIds.Select(x => $"cameras%5B%5D={x}"));
 
-            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            var response = await GetAsync("/api/2.0/motion", queryParams, cancellationToken)
+                .ConfigureAwait(false);
+
+            return JsonConvert.DeserializeObject<Response<CameraMotion>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false), _jsonSettings)
+                .Data;
         }
 
         /// <summary>
-        /// Gets NVR recordings ngle camera.
+        /// Gets NVR recordings.
         /// </summary>
-        /// <param name="cameraIds">Camera IDs to query.</param>
-        /// <param name="causes">Causes to query.</param>
         /// <param name="startTime">Start Time.</param>
         /// <param name="endTime">End Time.</param>
+        /// <param name="cameraIds">Camera IDs to query.</param>
+        /// <param name="causes">Causes to query.</param>
+        /// <param name="sortBy">Sort by (default: startTime).</param>
+        /// <param name="sort">Sort asc or desc (default: desc).</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dynamic object containing the JSON response.</returns>
-        public async Task<dynamic> RecordingAsync(IList<string> cameraIds, IList<string> causes, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<Recording>> RecordingAsync(
+            DateTime startTime,
+            DateTime endTime,
+            IEnumerable<string> cameraIds = null,
+            IEnumerable<RecordingEventType> causes = null,
+            string sortBy = "startTime",
+            string sort = "desc",
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             var jsStartTime = startTime.RemoveMilliseconds().ToUnixTimestamp();
             var jsEndTime = endTime.RemoveMilliseconds().ToUnixTimestamp();
 
-            var url = "/api/2.0/recording?" +
-                string.Join("&", causes.Select(x => $"cause%5B%5D={x}")) +
-                $"&startTime={jsStartTime}&endTime={jsEndTime}&" +
-                string.Join("&", cameraIds.Select(x => $"cameras%5B%5D={x}")) +
-                "&idsOnly=false&sortBy=startTime&sort=desc";
-            var response = await GetAsync(url, cancellationToken).ConfigureAwait(false);
+            var queryParams = new List<string>
+            {
+                $"startTime={jsStartTime}",
+                $"endTime={jsEndTime}",
+                $"idsOnly=false",
+                $"sortBy={sortBy}",
+                $"sort={sort}"
+            };
 
-            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            if (causes != null)
+                queryParams.AddRange(causes.Select(x => $"cause%5B%5D={x.ToString().FirstCharToLower()}"));
+            if (cameraIds != null)
+                queryParams.AddRange(cameraIds.Select(x => $"cameras%5B%5D={x}"));
+
+            var response = await GetAsync("/api/2.0/recording", queryParams, cancellationToken)
+                .ConfigureAwait(false);
+
+            return JsonConvert.DeserializeObject<Response<Recording>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false), _jsonSettings)
+                .Data;
+        }
+
+        /// <summary>
+        /// Gets NVR recording ids.
+        /// </summary>
+        /// <param name="startTime">Start Time.</param>
+        /// <param name="endTime">End Time.</param>
+        /// <param name="cameraIds">Camera IDs to query.</param>
+        /// <param name="causes">Causes to query.</param>
+        /// <param name="sortBy">Sort by (default: startTime).</param>
+        /// <param name="sort">Sort asc or desc (default: asc).</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A dynamic object containing the JSON response.</returns>
+        public async Task<IEnumerable<string>> RecordingIdAsync(
+            DateTime startTime,
+            DateTime endTime,
+            IEnumerable<string> cameraIds = null,
+            IEnumerable<RecordingEventType> causes = null,
+            string sortBy = "startTime",
+            string sort = "asc",
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var jsStartTime = startTime.RemoveMilliseconds().ToUnixTimestamp();
+            var jsEndTime = endTime.RemoveMilliseconds().ToUnixTimestamp();
+
+            var queryParams = new List<string>
+            {
+                $"startTime={jsStartTime}",
+                $"endTime={jsEndTime}",
+                $"idsOnly=true",
+                $"sortBy={sortBy}",
+                $"sort={sort}"
+            };
+
+            if (causes != null)
+                queryParams.AddRange(causes.Select(x => $"cause%5B%5D={x.ToString().FirstCharToLower()}"));
+            if (cameraIds != null)
+                queryParams.AddRange(cameraIds.Select(x => $"cameras%5B%5D={x}"));
+
+            var response = await GetAsync("/api/2.0/recording", queryParams, cancellationToken)
+                .ConfigureAwait(false);
+
+            return JsonConvert.DeserializeObject<Response<string>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false), _jsonSettings)
+                .Data;
         }
 
         /// <summary>
@@ -177,25 +251,33 @@ namespace I8Beef.UniFi.Video
         /// <param name="channel">Stream channel to query.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dynamic object containing the JSON response.</returns>
-        public async Task<dynamic> StreamUrlAsync(string cameraId, int channel, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<StreamUrls>> StreamUrlAsync(string cameraId, int channel, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var response = await GetAsync($"/api/2.0/stream/{cameraId}/{channel}/url", cancellationToken).ConfigureAwait(false);
+            var response = await GetAsync($"/api/2.0/stream/{cameraId}/{channel}/url", null, cancellationToken)
+                .ConfigureAwait(false);
 
-            return JObject.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            return JsonConvert.DeserializeObject<Response<StreamUrls>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false), _jsonSettings)
+                .Data;
         }
 
         /// <summary>
         /// Gets the URL specified and returns the result.
         /// </summary>
         /// <param name="relativeUrl">Relative URL to query.</param>
+        /// <param name="queryParams">Query parameters to pass.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dynamic object containing the JSON response.</returns>
-        private async Task<HttpResponseMessage> GetAsync(string relativeUrl, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<HttpResponseMessage> GetAsync(
+            string relativeUrl,
+            IEnumerable<string> queryParams = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             if (!IsAuthenticated)
                 await AuthorizeAsync();
 
-            var response = await _httpClient.GetAsync(_host + relativeUrl, cancellationToken).ConfigureAwait(false);
+            var url = _host + relativeUrl + (queryParams != null && queryParams.Any() ? "?" + string.Join("&", queryParams) : string.Empty);
+            var response = await _httpClient.GetAsync(url, cancellationToken)
+                .ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
                 IsAuthenticated = false;
