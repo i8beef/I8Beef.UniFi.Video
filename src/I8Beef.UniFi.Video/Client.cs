@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using I8Beef.UniFi.Video.Protocol;
+using I8Beef.UniFi.Video.Protocol.Bootstrap;
 using I8Beef.UniFi.Video.Protocol.Camera;
 using I8Beef.UniFi.Video.Protocol.Motion;
 using I8Beef.UniFi.Video.Protocol.Recording;
@@ -85,12 +86,12 @@ namespace I8Beef.UniFi.Video
         /// </summary>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dynamic object containing the JSON response.</returns>
-        public async Task<dynamic> BootstrapAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Bootstrap> BootstrapAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             var response = await GetAsync($"/api/2.0/bootstrap", null, cancellationToken).ConfigureAwait(false);
 
-            return JObject.Parse(await response.Content.ReadAsStringAsync()
-                .ConfigureAwait(false));
+            return JsonConvert.DeserializeObject<Response<Bootstrap>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false), _jsonSettings)
+                .Data.FirstOrDefault();
         }
 
         /// <summary>
