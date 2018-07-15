@@ -13,21 +13,30 @@ namespace I8Beef.UniFi.Video.Protocol.Bootstrap
         /// </summary>
         public string AdminUserGroupId { get; set; }
 
-        // todo: alertSchedules
-
-        // todo: cameraSchedules
+        /// <summary>
+        /// Alert schedules.
+        /// </summary>
+        public IList<dynamic> AlertSchedules { get; set; }
 
         /// <summary>
-        /// Cameras
+        /// Camera schedules.
         /// </summary>
-        public IEnumerable<Camera.Camera> Cameras { get; set; }
+        public IList<dynamic> CameraSchedules { get; set; }
+
+        /// <summary>
+        /// Cameras.
+        /// </summary>
+        public IList<Camera.Camera> Cameras { get; set; }
 
         /// <summary>
         /// Cloud host.  Usually video.ubnt.com.
         /// </summary>
         public string CloudHost { get; set; }
 
-        // todo: firmwares
+        /// <summary>
+        /// Firmwares.
+        /// </summary>
+        public IList<Firmware> Firmware { get; set; }
 
         /// <summary>
         /// Is the system factory defaulted?
@@ -49,7 +58,10 @@ namespace I8Beef.UniFi.Video.Protocol.Bootstrap
         /// </summary>
         public IList<LiveView> LiveViews { get; set; }
 
-        // todo: maps
+        /// <summary>
+        /// Maps.
+        /// </summary>
+        public IList<Map> Maps { get; set; }
 
         /// <summary>
         /// New critical alerts.

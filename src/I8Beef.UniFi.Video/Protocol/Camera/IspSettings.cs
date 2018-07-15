@@ -38,12 +38,12 @@
         /// <summary>
         /// Flip image.
         /// </summary>
-        public int Flip { get; set; }
+        public bool Flip { get; set; }
 
         /// <summary>
         /// Mirror image.
         /// </summary>
-        public int Mirror { get; set; }
+        public bool Mirror { get; set; }
 
         /// <summary>
         /// Gamma correction
@@ -56,7 +56,7 @@
         /// <summary>
         /// WDR.
         /// </summary>
-        public int Wdr { get; set; }
+        public bool Wdr { get; set; }
 
         /// <summary>
         /// AE mode.
@@ -66,7 +66,7 @@
         /// <summary>
         /// IR LED mode.
         /// </summary>
-        public string IrLedMode { get; set; }
+        public IrLedMode IrLedMode { get; set; }
 
         /// <summary>
         /// IR LED level.
@@ -101,37 +101,37 @@
         /// <summary>
         /// Enable 3DNR.
         /// </summary>
-        public int Enable3Dnr { get; set; }
+        public int? Enable3Dnr { get; set; }
 
         /// <summary>
         /// Zoom sream Id.
         /// </summary>
-        public int DZoomStreamId { get; set; }
+        public int? DZoomStreamId { get; set; }
 
         /// <summary>
         /// Zoom center X coordinate.
         /// </summary>
-        public int DZoomCenterX { get; set; }
+        public int? DZoomCenterX { get; set; }
 
         /// <summary>
         /// Zoom center Y coordinate.
         /// </summary>
-        public int DZoomCenterY { get; set; }
+        public int? DZoomCenterY { get; set; }
 
         /// <summary>
         /// Zoom scale.
         /// </summary>
-        public int DZoomScale { get; set; }
+        public int? DZoomScale { get; set; }
 
         /// <summary>
         /// Lens distortion correction.
         /// </summary>
-        public int LensDistortionCorrection { get; set; }
+        public bool? LensDistortionCorrection { get; set; }
 
         /// <summary>
         /// Enable external IR.
         /// </summary>
-        public int EnableExternalIr { get; set; }
+        public bool? EnableExternalIr { get; set; }
 
         /// <summary>
         /// Touch focus X.
@@ -146,61 +146,61 @@
         /// <summary>
         /// (IR ON) Brightness.
         /// </summary>
-        public int IrOnValBrightness { get; set; }
+        public int? IrOnValBrightness { get; set; }
 
         /// <summary>
         /// (IR ON STS) Brightness.
         /// </summary>
-        public int IrOnStsBrightness { get; set; }
+        public int? IrOnStsBrightness { get; set; }
 
         /// <summary>
         /// (IR ON) Contrast.
         /// </summary>
-        public int IrOnValContrast { get; set; }
+        public int? IrOnValContrast { get; set; }
 
         /// <summary>
         /// (IR ON STS) Contrast.
         /// </summary>
-        public int IrOnStsContrast { get; set; }
+        public int? IrOnStsContrast { get; set; }
 
         /// <summary>
         /// (IR ON) Denoise.
         /// </summary>
-        public int IrOnValDenoise { get; set; }
+        public int? IrOnValDenoise { get; set; }
 
         /// <summary>
         /// (IR ON STS) Denoise.
         /// </summary>
-        public int IrOnStsDenoise { get; set; }
+        public bool? IrOnStsDenoise { get; set; }
 
         /// <summary>
         /// (IR ON) Hue.
         /// </summary>
-        public int IrOnValHue { get; set; }
+        public int? IrOnValHue { get; set; }
 
         /// <summary>
         /// (IR ON STS) Hue.
         /// </summary>
-        public int IrOnStsHue { get; set; }
+        public bool? IrOnStsHue { get; set; }
 
         /// <summary>
         /// (IR ON) Saturation.
         /// </summary>
-        public int IrOnValSaturation { get; set; }
+        public int? IrOnValSaturation { get; set; }
 
         /// <summary>
         /// (IR ON STS) Saturation.
         /// </summary>
-        public int IrOnStsSaturation { get; set; }
+        public bool? IrOnStsSaturation { get; set; }
 
         /// <summary>
         /// (IR ON) Sharpness.
         /// </summary>
-        public int IrOnValSharpness { get; set; }
+        public int? IrOnValSharpness { get; set; }
 
         /// <summary>
         /// (IR ON STS) Sharpness.
         /// </summary>
-        public int IrOnStsSharpness { get; set; }
+        public bool? IrOnStsSharpness { get; set; }
     }
 }
