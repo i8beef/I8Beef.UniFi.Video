@@ -13,15 +13,12 @@ using I8Beef.UniFi.Video.Protocol.Motion;
 using I8Beef.UniFi.Video.Protocol.Recording;
 using I8Beef.UniFi.Video.Protocol.Stream;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace I8Beef.UniFi.Video
 {
-    /// <summary>
-    /// UniFi Video Client.
-    /// </summary>
-    public class Client : IDisposable
+    /// <inheritdoc />
+    public class Client : IClient
     {
         private readonly JsonSerializerSettings _jsonSettings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() };
         private readonly string _host;
@@ -55,16 +52,10 @@ namespace I8Beef.UniFi.Video
             _httpClient = new HttpClient(_httpClientHandler);
         }
 
-        /// <summary>
-        /// Indicates if the client is currently authenticated.
-        /// </summary>
+        /// <inheritdoc />
         public bool IsAuthenticated { get; private set; }
 
-        /// <summary>
-        /// Authorize with NVR.
-        /// </summary>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>Awaitable <see cref="Task"/>.</returns>
+        /// <inheritdoc />
         public async Task AuthorizeAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             var body = new StringContent("{\"email\":\"" + _username + "\", \"password\":\"" + _password + "\"}", Encoding.UTF8, "application/json");
@@ -81,11 +72,7 @@ namespace I8Beef.UniFi.Video
             IsAuthenticated = true;
         }
 
-        /// <summary>
-        /// Gets NVR Bootstrap information, which contains most of current state.
-        /// </summary>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>A dynamic object containing the JSON response.</returns>
+        /// <inheritdoc />
         public async Task<Bootstrap> BootstrapAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             var response = await GetAsync($"/api/2.0/bootstrap", null, cancellationToken).ConfigureAwait(false);
@@ -94,12 +81,7 @@ namespace I8Beef.UniFi.Video
                 .Data.FirstOrDefault();
         }
 
-        /// <summary>
-        /// Gets NVR camera information for a single camera.
-        /// </summary>
-        /// <param name="cameraId">Camera ID to query.</param>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>A dynamic object containing the JSON response.</returns>
+        /// <inheritdoc />
         public async Task<IEnumerable<Camera>> CameraAsync(string cameraId = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             var response = await GetAsync("/api/2.0/camera" + (!string.IsNullOrEmpty(cameraId) ? $"/{cameraId}" : string.Empty), null, cancellationToken)
@@ -109,17 +91,7 @@ namespace I8Beef.UniFi.Video
                 .Data;
         }
 
-        /// <summary>
-        /// Gets NVR motion alerts for a single camera.
-        /// </summary>
-        /// <param name="startTime">Start Time.</param>
-        /// <param name="endTime">End Time.</param>
-        /// <param name="intervalSeconds">Interval seconds (defaults: 2, minimum: 2, maximum: 30).</param>
-        /// <param name="cameraIds">Camera IDs to query.</param>
-        /// <param name="sortBy">Sort by (default: startTime).</param>
-        /// <param name="sort">Sort asc or desc (default: asc).</param>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>A dynamic object containing the JSON response.</returns>
+        /// <inheritdoc />
         public async Task<IEnumerable<CameraMotion>> MotionAlertsAsync(
             DateTime startTime,
             DateTime endTime,
@@ -157,17 +129,7 @@ namespace I8Beef.UniFi.Video
                 .Data;
         }
 
-        /// <summary>
-        /// Gets NVR recordings.
-        /// </summary>
-        /// <param name="startTime">Start Time.</param>
-        /// <param name="endTime">End Time.</param>
-        /// <param name="cameraIds">Camera IDs to query.</param>
-        /// <param name="causes">Causes to query.</param>
-        /// <param name="sortBy">Sort by (default: startTime).</param>
-        /// <param name="sort">Sort asc or desc (default: desc).</param>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>A dynamic object containing the JSON response.</returns>
+        /// <inheritdoc />
         public async Task<IEnumerable<Recording>> RecordingAsync(
             DateTime startTime,
             DateTime endTime,
@@ -201,17 +163,7 @@ namespace I8Beef.UniFi.Video
                 .Data;
         }
 
-        /// <summary>
-        /// Gets NVR recording ids.
-        /// </summary>
-        /// <param name="startTime">Start Time.</param>
-        /// <param name="endTime">End Time.</param>
-        /// <param name="cameraIds">Camera IDs to query.</param>
-        /// <param name="causes">Causes to query.</param>
-        /// <param name="sortBy">Sort by (default: startTime).</param>
-        /// <param name="sort">Sort asc or desc (default: asc).</param>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>A dynamic object containing the JSON response.</returns>
+        /// <inheritdoc />
         public async Task<IEnumerable<string>> RecordingIdAsync(
             DateTime startTime,
             DateTime endTime,
@@ -245,13 +197,7 @@ namespace I8Beef.UniFi.Video
                 .Data;
         }
 
-        /// <summary>
-        /// Gets NVR stream information for a single camera.
-        /// </summary>
-        /// <param name="cameraId">Camera ID to query.</param>
-        /// <param name="channel">Stream channel to query.</param>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>A dynamic object containing the JSON response.</returns>
+        /// <inheritdoc />
         public async Task<IEnumerable<StreamUrls>> StreamUrlAsync(string cameraId, int channel, CancellationToken cancellationToken = default(CancellationToken))
         {
             var response = await GetAsync($"/api/2.0/stream/{cameraId}/{channel}/url", null, cancellationToken)
