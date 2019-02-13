@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using I8Beef.UniFi.Video.Protocol.Bootstrap;
 using I8Beef.UniFi.Video.Protocol.Camera;
+using I8Beef.UniFi.Video.Protocol.Common;
 using I8Beef.UniFi.Video.Protocol.Motion;
 using I8Beef.UniFi.Video.Protocol.Recording;
 using I8Beef.UniFi.Video.Protocol.Stream;
@@ -89,5 +90,15 @@ namespace I8Beef.UniFi.Video
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A dynamic object containing the JSON response.</returns>
         Task<IEnumerable<StreamUrls>> StreamUrlAsync(string cameraId, int channel, CancellationToken cancellationToken = default(CancellationToken));
+
+        /// <summary>
+        /// Sets NVR record mode for a single camera.
+        /// </summary>
+        /// <param name="cameraId">Camera ID to query.</param>
+        /// <param name="recordMode">Record mode.</param>
+        /// <param name="channel">Stream channel.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>An awaitable <see cref="Task"/>.</returns>
+        Task SetRecordModeAsync(string cameraId, RecordingMode recordMode, int? channel = null, CancellationToken cancellationToken = default(CancellationToken));
     }
 }

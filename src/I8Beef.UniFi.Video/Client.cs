@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using I8Beef.UniFi.Video.Protocol;
 using I8Beef.UniFi.Video.Protocol.Bootstrap;
 using I8Beef.UniFi.Video.Protocol.Camera;
+using I8Beef.UniFi.Video.Protocol.Common;
 using I8Beef.UniFi.Video.Protocol.Motion;
 using I8Beef.UniFi.Video.Protocol.Recording;
 using I8Beef.UniFi.Video.Protocol.Stream;
@@ -207,8 +208,42 @@ namespace I8Beef.UniFi.Video
                 .Data;
         }
 
+        /// <inheritdoc />
+        public async Task SetRecordModeAsync(string cameraId, RecordingMode recordMode, int? channel = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var allCameraSettings = await CameraAsync(cameraId, cancellationToken)
+                .ConfigureAwait(false);
+            var cameraSettings = allCameraSettings.FirstOrDefault();
+
+            switch (recordMode)
+            {
+                case RecordingMode.FullTime:
+                    cameraSettings.RecordingSettings.FullTimeRecordEnabled = true;
+                    cameraSettings.RecordingSettings.MotionRecordEnabled = false;
+                    break;
+                case RecordingMode.Motion:
+                    cameraSettings.RecordingSettings.FullTimeRecordEnabled = false;
+                    cameraSettings.RecordingSettings.MotionRecordEnabled = true;
+                    break;
+                case RecordingMode.None:
+                default:
+                    cameraSettings.RecordingSettings.FullTimeRecordEnabled = false;
+                    cameraSettings.RecordingSettings.MotionRecordEnabled = false;
+                    break;
+            }
+
+            if (channel.HasValue)
+            {
+                cameraSettings.RecordingSettings.Channel = channel.Value.ToString();
+            }
+
+            var data = JsonConvert.SerializeObject(cameraSettings, _jsonSettings);
+            var response = await PutAsync(data, $"/api/2.0/camera/{cameraId}", null, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         /// <summary>
-        /// Gets the URL specified and returns the result.
+        /// GETs the URL specified and returns the result.
         /// </summary>
         /// <param name="relativeUrl">Relative URL to query.</param>
         /// <param name="queryParams">Query parameters to pass.</param>
@@ -224,6 +259,35 @@ namespace I8Beef.UniFi.Video
 
             var url = _host + relativeUrl + (queryParams != null && queryParams.Any() ? "?" + string.Join("&", queryParams) : string.Empty);
             var response = await _httpClient.GetAsync(url, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+                IsAuthenticated = false;
+
+            response.EnsureSuccessStatusCode();
+
+            return response;
+        }
+
+        /// <summary>
+        /// PUTs the URL specified and returns the result.
+        /// </summary>
+        /// <param name="data">Payload to pass.</param>
+        /// <param name="relativeUrl">Relative URL to query.</param>
+        /// <param name="queryParams">Query parameters to pass.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A dynamic object containing the JSON response.</returns>
+        private async Task<HttpResponseMessage> PutAsync(
+            string data,
+            string relativeUrl,
+            IEnumerable<string> queryParams = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!IsAuthenticated)
+                await AuthorizeAsync();
+
+            var url = _host + relativeUrl + (queryParams != null && queryParams.Any() ? "?" + string.Join("&", queryParams) : string.Empty);
+            var response = await _httpClient.PutAsync(url, new StringContent(data), cancellationToken)
                 .ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
