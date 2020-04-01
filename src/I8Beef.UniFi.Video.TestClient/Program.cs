@@ -13,19 +13,9 @@ namespace I8Beef.UniFi.Video.TestClient
     class Program
     {
         /// <summary>
-        /// Main entry point.
-        /// </summary>
-        /// <param name="args">Arguments.</param>
-        public static void Main(string[] args)
-        {
-            MainAsync(args).GetAwaiter().GetResult();
-        }
-
-        /// <summary>
         /// Async Main.
         /// </summary>
-        /// <param name="args">Arguments.</param>
-        public static async Task MainAsync(string[] args)
+        public static async Task Main()
         {
             var host = "";
             var username = "";
@@ -86,8 +76,6 @@ namespace I8Beef.UniFi.Video.TestClient
                     // Wait on second
                     await Task.Delay(waitSeconds * 1000);
                 }
-
-                Console.ReadKey();
             }
         }
     }

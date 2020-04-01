@@ -57,7 +57,7 @@ namespace I8Beef.UniFi.Video
         public bool IsAuthenticated { get; private set; }
 
         /// <inheritdoc />
-        public async Task AuthorizeAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task AuthorizeAsync(CancellationToken cancellationToken = default)
         {
             var body = new StringContent("{\"email\":\"" + _username + "\", \"password\":\"" + _password + "\"}", Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync(_host + "/api/2.0/login", body, cancellationToken)
@@ -74,7 +74,7 @@ namespace I8Beef.UniFi.Video
         }
 
         /// <inheritdoc />
-        public async Task<Bootstrap> BootstrapAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Bootstrap> BootstrapAsync(CancellationToken cancellationToken = default)
         {
             var response = await GetAsync($"/api/2.0/bootstrap", null, cancellationToken).ConfigureAwait(false);
 
@@ -83,7 +83,7 @@ namespace I8Beef.UniFi.Video
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<Camera>> CameraAsync(string cameraId = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<Camera>> CameraAsync(string cameraId = null, CancellationToken cancellationToken = default)
         {
             var response = await GetAsync("/api/2.0/camera" + (!string.IsNullOrEmpty(cameraId) ? $"/{cameraId}" : string.Empty), null, cancellationToken)
                 .ConfigureAwait(false);
@@ -100,7 +100,7 @@ namespace I8Beef.UniFi.Video
             IEnumerable<string> cameraIds = null,
             string sortBy = "startTime",
             string sort = "asc",
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             // Minimum resolution for UniFi is 2 seconds
             if (intervalSeconds < 2)
@@ -138,7 +138,7 @@ namespace I8Beef.UniFi.Video
             IEnumerable<RecordingEventType> causes = null,
             string sortBy = "startTime",
             string sort = "desc",
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             var jsStartTime = startTime.RemoveMilliseconds().ToUnixTimestamp();
             var jsEndTime = endTime.RemoveMilliseconds().ToUnixTimestamp();
@@ -172,7 +172,7 @@ namespace I8Beef.UniFi.Video
             IEnumerable<RecordingEventType> causes = null,
             string sortBy = "startTime",
             string sort = "asc",
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             var jsStartTime = startTime.RemoveMilliseconds().ToUnixTimestamp();
             var jsEndTime = endTime.RemoveMilliseconds().ToUnixTimestamp();
@@ -199,7 +199,7 @@ namespace I8Beef.UniFi.Video
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<StreamUrls>> StreamUrlAsync(string cameraId, int channel, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<StreamUrls>> StreamUrlAsync(string cameraId, int channel, CancellationToken cancellationToken = default)
         {
             var response = await GetAsync($"/api/2.0/stream/{cameraId}/{channel}/url", null, cancellationToken)
                 .ConfigureAwait(false);
@@ -209,7 +209,7 @@ namespace I8Beef.UniFi.Video
         }
 
         /// <inheritdoc />
-        public async Task SetRecordModeAsync(string cameraId, RecordingMode recordMode, int? channel = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task SetRecordModeAsync(string cameraId, RecordingMode recordMode, int? channel = null, CancellationToken cancellationToken = default)
         {
             var allCameraSettings = await CameraAsync(cameraId, cancellationToken)
                 .ConfigureAwait(false);
@@ -252,10 +252,10 @@ namespace I8Beef.UniFi.Video
         private async Task<HttpResponseMessage> GetAsync(
             string relativeUrl,
             IEnumerable<string> queryParams = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
-                await AuthorizeAsync();
+                await AuthorizeAsync().ConfigureAwait(false);
 
             var url = _host + relativeUrl + (queryParams != null && queryParams.Any() ? "?" + string.Join("&", queryParams) : string.Empty);
             var response = await _httpClient.GetAsync(url, cancellationToken)
@@ -281,10 +281,10 @@ namespace I8Beef.UniFi.Video
             string data,
             string relativeUrl,
             IEnumerable<string> queryParams = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
-                await AuthorizeAsync();
+                await AuthorizeAsync().ConfigureAwait(false);
 
             var url = _host + relativeUrl + (queryParams != null && queryParams.Any() ? "?" + string.Join("&", queryParams) : string.Empty);
             var response = await _httpClient.PutAsync(url, new StringContent(data), cancellationToken)
