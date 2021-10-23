@@ -1,7 +1,7 @@
 # I8Beef.UniFi.Video
 
-[![Build status](https://ci.appveyor.com/api/projects/status/2f9pnimxntlec1bf/branch/release?svg=true)](https://ci.appveyor.com/project/i8beef/i8beef-unifi-video/branch/release)
-[![Build status](https://ci.appveyor.com/api/projects/status/2f9pnimxntlec1bf/branch/master?svg=true)](https://ci.appveyor.com/project/i8beef/i8beef-unifi-video/branch/master)
+![Build](https://github.com/i8beef/I8Beef.UniFi.Video/actions/workflows/build.yml/badge.svg?branch=master)
+![Release](https://github.com/i8beef/I8Beef.UniFi.Video/actions/workflows/release.yml/badge.svg)
 
 Library for communicating with UniFi Video NVRs.
 
